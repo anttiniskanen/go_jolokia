@@ -22,6 +22,8 @@ type JolokiaClient struct {
 	user string
 	// The password for the jolokia agent (required if user is specified)
 	pass string
+    // The authorization token for the jolokia agent
+    token string
 	// The target host in a jolokia proxy setup
 	target string
 	// The target host jmx username
@@ -119,7 +121,7 @@ type httpResponse struct {
 	Body       []byte
 }
 
-func performPostRequest(request *httpRequest, user, pass string) (*httpResponse, error) {
+func performPostRequest(request *httpRequest, user, pass, token string) (*httpResponse, error) {
 
 	var url = request.Url
 	var req *http.Request
@@ -142,6 +144,10 @@ func performPostRequest(request *httpRequest, user, pass string) (*httpResponse,
 	if user != "" || pass != "" {
 		req.SetBasicAuth(user, pass)
 	}
+
+    if token != "" {
+        req.Header.Set("Authorization", token)
+    }
 
 	client := &http.Client{}
 
@@ -223,9 +229,10 @@ func NewJolokiaClient(jolokiaUrl string) *JolokiaClient {
 }
 
 /* Set access credential to Jolokia client */
-func (jolokiaClient *JolokiaClient) SetCredential(userName string, pass string) {
+func (jolokiaClient *JolokiaClient) SetCredential(userName string, pass string, token string) {
 	jolokiaClient.user = userName
 	jolokiaClient.pass = pass
+    jolokiaClient.token = token
 }
 
 /* Set target host when jolokia agent working in proxy architecture e.g. "10.0.1.96:7911"
@@ -268,7 +275,7 @@ func (jolokiaClient *JolokiaClient) executePostRequestCallback(pattern string, w
 		requestUrl = requestUrl + "/?" + pattern
 	}
 	request := &httpRequest{Url: requestUrl, Body: jsonReq}
-	response, httpErr := performPostRequest(request, jolokiaClient.user, jolokiaClient.pass)
+	response, httpErr := performPostRequest(request, jolokiaClient.user, jolokiaClient.pass, jolokiaClient.token)
 	if httpErr != nil {
 		return "", fmt.Errorf("HTTP Request Failed: %v", httpErr)
 	}
